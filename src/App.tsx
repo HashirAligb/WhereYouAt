@@ -5,7 +5,7 @@ import HistorySection from './components/HistorySection';
 import RedditSection from './components/RedditSection';
 import SafetySection from './components/SafetySection';
 import { cn } from './lib/utils';
-import { getLocationData, LocationData } from './lib/locationData';
+import { getLocationData, LocationData, InvalidLocationError } from './lib/locationData';
 
 type Tab = 'history' | 'reddit' | 'safety';
 
@@ -28,7 +28,12 @@ export default function App() {
         const data = await getLocationData(location);
         if (!cancelled) setLocationData(data);
       } catch (err) {
-        if (!cancelled) setError('Failed to load location data. Please try again.');
+        if (!cancelled) {
+          setError(err instanceof InvalidLocationError
+            ? err.message
+            : 'Failed to load location data. Please try again.'
+          );
+        }
         console.error(err);
       } finally {
         if (!cancelled) setLoading(false);

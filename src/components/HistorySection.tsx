@@ -49,8 +49,9 @@ export default function HistorySection({ location, historyContent, historySummar
                     .split('\n')
                     .filter(line => line.trim())
                     .map((line, i) => {
-                      if (line.startsWith('## ')) return <h3 key={i} className="text-xl font-bold text-burgundy mt-6 mb-2 not-italic">{line.replace('## ', '')}</h3>;
-                      if (line.startsWith('# '))  return <h2 key={i} className="text-2xl font-bold text-burgundy mt-8 mb-3 not-italic">{line.replace('# ', '')}</h2>;
+                      if (line.startsWith('### ')) return <h4 key={i} className="text-lg font-bold text-burgundy mt-4 mb-1 not-italic">{line.replace('### ', '')}</h4>;
+                      if (line.startsWith('## '))  return <h3 key={i} className="text-xl font-bold text-burgundy mt-6 mb-2 not-italic">{line.replace('## ', '')}</h3>;
+                      if (line.startsWith('# '))   return <h2 key={i} className="text-2xl font-bold text-burgundy mt-8 mb-3 not-italic">{line.replace('# ', '')}</h2>;
                       if (line.startsWith('• ') || line.startsWith('* ')) return <li key={i} className="ml-4 list-disc">{line.replace(/^[•*] /, '')}</li>;
                       if (line.startsWith('**') && line.endsWith('**')) return <p key={i} className="font-bold">{line.replace(/\*\*/g, '')}</p>;
                       return <p key={i}>{line.replace(/\*\*(.*?)\*\*/g, '$1')}</p>;

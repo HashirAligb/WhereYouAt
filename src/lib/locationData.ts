@@ -10,6 +10,25 @@ export interface LocationData {
 const normalizeKey = (location: string) =>
   location.toLowerCase().trim().replace(/\s+/g, ' ');
 
+export class InvalidLocationError extends Error {
+  constructor(location: string) {
+    super(`"${location}" doesn't appear to be a real place. Try a neighborhood, city, or address.`);
+    this.name = 'InvalidLocationError';
+  }
+}
+
+async function validateLocation(location: string): Promise<void> {
+  try {
+    const query = encodeURIComponent(location);
+    const res = await fetch(`/api/geocode/search?q=${query}&format=json&limit=1`);
+    const data = await res.json();
+    if (!data || data.length === 0) throw new InvalidLocationError(location);
+  } catch (e) {
+    if (e instanceof InvalidLocationError) throw e;
+    // If geocoding itself fails (network error), allow through
+  }
+}
+
 // Retry a Gemini call up to maxRetries times on 429 rate limit errors
 async function withRetry<T>(
   fn: () => Promise<T>,
@@ -128,6 +147,9 @@ export async function getLocationData(location: string): Promise<LocationData> {
       redditData: cached.reddit_content,
     };
   }
+
+  // Validate location is real before hitting Gemini
+  await validateLocation(location);
 
   // Cache miss — fetch fresh from Gemini
   const data = await fetchFromGemini(location);
