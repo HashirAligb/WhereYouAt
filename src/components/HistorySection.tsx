@@ -9,6 +9,36 @@ interface HistorySectionProps {
   loading: boolean;
 }
 
+function renderLine(line: string, i: number) {
+  const clean = (s: string) => s.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
+
+  if (line.startsWith('### ')) return (
+    <h4 key={i} className="text-base font-bold text-burgundy mt-5 mb-1 not-italic tracking-tight">
+      {clean(line.slice(4))}
+    </h4>
+  );
+  if (line.startsWith('## ')) return (
+    <h3 key={i} className="text-lg font-bold text-burgundy mt-7 mb-2 not-italic tracking-tight border-b border-burgundy/10 pb-1">
+      {clean(line.slice(3))}
+    </h3>
+  );
+  if (line.startsWith('# ')) return (
+    <h2 key={i} className="text-xl font-bold text-burgundy mt-8 mb-3 not-italic tracking-tight">
+      {clean(line.slice(2))}
+    </h2>
+  );
+  if (line.startsWith('• ') || line.startsWith('- ') || line.startsWith('* ')) return (
+    <li key={i} className="ml-5 list-disc text-burgundy/75 leading-relaxed">
+      {clean(line.replace(/^[•\-*] /, ''))}
+    </li>
+  );
+  return (
+    <p key={i} className="text-burgundy/75 leading-relaxed">
+      {clean(line)}
+    </p>
+  );
+}
+
 export default function HistorySection({ location, historyContent, historySummary, loading }: HistorySectionProps) {
   const [isSummarized, setIsSummarized] = React.useState(false);
 
@@ -18,57 +48,51 @@ export default function HistorySection({ location, historyContent, historySummar
         <div className="flex-1 space-y-6">
           <div className="bg-pure-white/85 backdrop-blur-md p-8 md:p-12 rounded-[2rem] border border-burgundy/10 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-burgundy/10" />
-            <div className="flex items-center justify-between mb-8">
+
+            {/* Header */}
+            <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
               <div className="flex items-center gap-3">
-                <BookOpen className="w-6 h-6 text-burgundy" />
+                <BookOpen className="w-6 h-6 text-burgundy flex-shrink-0" />
                 <h2 className="text-2xl font-serif font-bold text-burgundy italic">Chronicle of {location}</h2>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-shrink-0">
                 <button
                   onClick={() => setIsSummarized(!isSummarized)}
                   disabled={loading}
-                  className="px-4 py-1.5 bg-burgundy/5 border border-burgundy/10 rounded-full text-[10px] font-bold uppercase tracking-widest text-burgundy hover:bg-burgundy hover:text-cream transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="px-4 py-1.5 bg-burgundy/5 border border-burgundy/10 rounded-full text-[10px] font-bold uppercase tracking-widest text-burgundy hover:bg-burgundy hover:text-cream transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                 >
-                  {isSummarized ? 'Show Full History' : 'Summarize'}
+                  {isSummarized ? 'Show Full' : 'Summarize'}
                 </button>
-                <div className="hidden sm:block text-[10px] font-bold uppercase tracking-widest text-burgundy/40 bg-burgundy/5 px-3 py-1 rounded-full">
+                <span className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-full bg-burgundy/5 border border-burgundy/10 text-[10px] font-bold uppercase tracking-widest text-burgundy/40 whitespace-nowrap">
                   Archival Source: Gemini-2.5
-                </div>
+                </span>
               </div>
             </div>
 
+            {/* Content */}
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <Loader2 className="w-8 h-8 text-burgundy animate-spin" />
                 <p className="text-sm font-bold text-burgundy/40 uppercase tracking-widest">Consulting the archives...</p>
               </div>
             ) : (
-              <div className="prose prose-burgundy max-w-none">
-                <div className="text-burgundy/80 font-serif leading-relaxed space-y-4 text-lg">
-                  {(isSummarized ? historySummary : historyContent)
-                    .split('\n')
-                    .filter(line => line.trim())
-                    .map((line, i) => {
-                      if (line.startsWith('### ')) return <h4 key={i} className="text-lg font-bold text-burgundy mt-4 mb-1 not-italic">{line.replace('### ', '')}</h4>;
-                      if (line.startsWith('## '))  return <h3 key={i} className="text-xl font-bold text-burgundy mt-6 mb-2 not-italic">{line.replace('## ', '')}</h3>;
-                      if (line.startsWith('# '))   return <h2 key={i} className="text-2xl font-bold text-burgundy mt-8 mb-3 not-italic">{line.replace('# ', '')}</h2>;
-                      if (line.startsWith('• ') || line.startsWith('* ')) return <li key={i} className="ml-4 list-disc">{line.replace(/^[•*] /, '')}</li>;
-                      if (line.startsWith('**') && line.endsWith('**')) return <p key={i} className="font-bold">{line.replace(/\*\*/g, '')}</p>;
-                      return <p key={i}>{line.replace(/\*\*(.*?)\*\*/g, '$1')}</p>;
-                    })
-                  }
-                </div>
+              <div className="font-serif text-base space-y-1">
+                {(isSummarized ? historySummary : historyContent)
+                  .split('\n')
+                  .filter(line => line.trim())
+                  .map((line, i) => renderLine(line, i))
+                }
               </div>
             )}
           </div>
         </div>
 
+        {/* Sidebar */}
         <div className="w-full md:w-72 space-y-6">
           <CatMascot
             mood={loading ? 'curious' : 'happy'}
             message={loading ? "Digging through the archives for the real tea..." : "Yo, this block has some serious history. Respect."}
           />
-
           <div className="bg-burgundy/5 p-6 rounded-2xl border border-burgundy/10">
             <h4 className="text-[10px] font-bold text-burgundy/40 uppercase tracking-widest mb-4">Historical Markers</h4>
             <ul className="space-y-3">
