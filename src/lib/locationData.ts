@@ -132,7 +132,10 @@ Rules:
 export async function getLocationData(location: string): Promise<LocationData> {
   const key = normalizeKey(location);
 
-  // Check Supabase cache first
+  // Validate FIRST — always reject fake/gibberish locations before cache or API
+  await validateLocation(location);
+
+  // Check Supabase cache
   const { data: cached } = await supabase
     .from('location_cache')
     .select('*')
@@ -147,9 +150,6 @@ export async function getLocationData(location: string): Promise<LocationData> {
       redditData: cached.reddit_content,
     };
   }
-
-  // Validate location is real before hitting Gemini
-  await validateLocation(location);
 
   // Cache miss — fetch fresh from Gemini
   const data = await fetchFromGemini(location);
