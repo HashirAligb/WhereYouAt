@@ -10,57 +10,96 @@ export interface LocationData {
 const normalizeKey = (location: string) =>
   location.toLowerCase().trim().replace(/\s+/g, ' ');
 
-async function fetchFromGemini(location: string): Promise<LocationData> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Retry a Gemini call up to maxRetries times on 429 rate limit errors
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  delayMs = 2000
+): Promise<T> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      const isRateLimit =
+        err instanceof Error &&
+        (err.message.includes('429') || err.message.toLowerCase().includes('too many requests'));
 
-  const [historyResponse, redditResponse] = await Promise.all([
+      if (isRateLimit && attempt < maxRetries - 1) {
+        await new Promise(res => setTimeout(res, delayMs * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+
+async function fetchFromGemini(location: string): Promise<LocationData> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  console.log('[locationData] API key present:', !!apiKey, '| length:', apiKey?.length ?? 0);
+  const ai = new GoogleGenAI({ apiKey });
+
+  const [historyResponse, redditResponse] = await Promise.allSettled([
     // History: single call, returns full text + inline summary
-    ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+    withRetry(() => ai.models.generateContent({
+      model: 'gemini-2.5-flash',
       contents: `Provide a detailed, engaging historical overview of ${location}. Focus on urban development, key events, and the "vibe" of the place through the decades. Keep it readable and archival in tone.
 
 After the full history, add a section that starts exactly with "SUMMARY:" followed by 3-4 bullet points (each starting with "•") covering the most critical turning points.`,
-    }),
+    })),
 
-    // Reddit: Gemini + Google Search grounding
-    ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: `Search Reddit for recent posts, threads, and comments about "${location}". Analyze what the community is actually saying and return ONLY a valid JSON object with this exact structure:
+    // Reddit: Gemini synthesizes community knowledge about the location
+    withRetry(() => ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `You are summarizing what Reddit communities typically say about "${location}". Based on your knowledge of Reddit discussions, local subreddits, and community sentiment about this place, return ONLY a valid JSON object with this exact structure:
 {
-  "summary": "2-3 sentence overview of the community conversation",
+  "summary": "2-3 sentence overview of the community conversation and general vibe",
   "sentiment": "positive" or "neutral" or "negative" or "mixed",
-  "themes": [{"label": "theme name", "description": "what people are saying about this"}],
-  "hot_takes": ["spicy or controversial opinion if present"]
+  "themes": [{"label": "theme name", "description": "what people typically discuss about this"}],
+  "hot_takes": ["a spicy or controversial opinion people hold about this place"]
 }
 
 Rules:
-- themes: include 2-6 themes based on what is genuinely being discussed
-- hot_takes: only include this field if controversial opinions actually exist, otherwise omit it entirely
-- Be accurate and honest about the sentiment
+- themes: include 2-6 themes that are genuinely relevant to this specific location
+- hot_takes: only include if real controversial takes exist about this place, otherwise omit the field entirely
+- sentiment should reflect the actual overall community feeling
+- Be specific to this location, not generic
 - Return ONLY the raw JSON object — no markdown, no code blocks, no extra text`,
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
-    }),
+    })),
   ]);
 
+  // Log any failures so we can debug
+  if (historyResponse.status === 'rejected') {
+    console.error('[locationData] History call failed:', historyResponse.reason);
+  }
+  if (redditResponse.status === 'rejected') {
+    console.error('[locationData] Reddit call failed:', redditResponse.reason);
+  }
+
   // Parse history + inline summary
-  const fullText = historyResponse.text ?? 'No history found for this location.';
-  let historyContent = fullText;
+  const historyText = historyResponse.status === 'fulfilled'
+    ? (historyResponse.value.text ?? 'No history found for this location.')
+    : 'No history found — the API may be rate limited. Try again in a moment.';
+  let historyContent = historyText;
   let historySummary = 'Summary unavailable.';
-  const summaryIndex = fullText.indexOf('SUMMARY:');
+  const summaryIndex = historyText.indexOf('SUMMARY:');
   if (summaryIndex !== -1) {
-    historyContent = fullText.slice(0, summaryIndex).trim();
-    historySummary = fullText.slice(summaryIndex + 'SUMMARY:'.length).trim();
+    historyContent = historyText.slice(0, summaryIndex).trim();
+    historySummary = historyText.slice(summaryIndex + 'SUMMARY:'.length).trim();
   }
 
   // Parse Reddit JSON
   let redditData: RedditData | null = null;
   try {
-    const raw = redditResponse.text ?? '{}';
+    const raw = redditResponse.status === 'fulfilled'
+      ? (redditResponse.value.text ?? '{}')
+      : '{}';
+    console.log('[locationData] Reddit raw response (first 300):', raw.slice(0, 300));
     const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     redditData = JSON.parse(cleaned) as RedditData;
-  } catch {
+    console.log('[locationData] Reddit parsed OK:', !!redditData);
+  } catch (e) {
+    console.error('[locationData] Reddit JSON parse failed:', e);
     redditData = {
       summary: `Could not load Reddit community data for ${location} right now.`,
       sentiment: 'neutral',

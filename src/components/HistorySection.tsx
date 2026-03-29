@@ -32,7 +32,7 @@ export default function HistorySection({ location, historyContent, historySummar
                   {isSummarized ? 'Show Full History' : 'Summarize'}
                 </button>
                 <div className="hidden sm:block text-[10px] font-bold uppercase tracking-widest text-burgundy/40 bg-burgundy/5 px-3 py-1 rounded-full">
-                  Archival Source: Gemini-2.0
+                  Archival Source: Gemini-2.5
                 </div>
               </div>
             </div>
@@ -44,8 +44,18 @@ export default function HistorySection({ location, historyContent, historySummar
               </div>
             ) : (
               <div className="prose prose-burgundy max-w-none">
-                <div className="text-burgundy/80 font-serif leading-relaxed space-y-6 text-lg whitespace-pre-wrap">
-                  {isSummarized ? historySummary : historyContent}
+                <div className="text-burgundy/80 font-serif leading-relaxed space-y-4 text-lg">
+                  {(isSummarized ? historySummary : historyContent)
+                    .split('\n')
+                    .filter(line => line.trim())
+                    .map((line, i) => {
+                      if (line.startsWith('## ')) return <h3 key={i} className="text-xl font-bold text-burgundy mt-6 mb-2 not-italic">{line.replace('## ', '')}</h3>;
+                      if (line.startsWith('# '))  return <h2 key={i} className="text-2xl font-bold text-burgundy mt-8 mb-3 not-italic">{line.replace('# ', '')}</h2>;
+                      if (line.startsWith('• ') || line.startsWith('* ')) return <li key={i} className="ml-4 list-disc">{line.replace(/^[•*] /, '')}</li>;
+                      if (line.startsWith('**') && line.endsWith('**')) return <p key={i} className="font-bold">{line.replace(/\*\*/g, '')}</p>;
+                      return <p key={i}>{line.replace(/\*\*(.*?)\*\*/g, '$1')}</p>;
+                    })
+                  }
                 </div>
               </div>
             )}

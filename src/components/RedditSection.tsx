@@ -35,7 +35,7 @@ export default function RedditSection({ location, redditData, loading }: RedditS
               </div>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
                 <TrendingUp className="w-3 h-3" />
-                AI Summary • Gemini-2.0
+                AI Summary • Gemini-2.5
               </div>
             </div>
 
