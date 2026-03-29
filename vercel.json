@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/offenders/:path*",
+      "destination": "https://api.offenders.io/:path*"
+    },
+    {
+      "source": "/api/geocode/:path*",
+      "destination": "https://nominatim.openstreetmap.org/:path*"
+    }
+  ]
+}
