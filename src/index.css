@@ -1,0 +1,35 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --font-serif: "Libre Baskerville", serif;
+  --font-sans: "Inter", sans-serif;
+
+  --color-cream: #FEF6E5;
+  --color-burgundy: #510009;
+  --color-pure-white: #FFFDFE;
+  --color-dusty-brown: #7A6248;
+  --color-map-ink: #5A4634;
+  
+  --color-urban-blue: #3A6EA5;
+  --color-safety-green: #4CAF50;
+  --color-alert-red: #D9534F;
+}
+
+@layer base {
+  body {
+    @apply bg-cream text-burgundy font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+.clean-card {
+  @apply bg-pure-white/70 backdrop-blur-md border border-burgundy/10 shadow-sm rounded-xl;
+}
+
+.sepia-subtle {
+  filter: sepia(0.3) contrast(1.05);
+}

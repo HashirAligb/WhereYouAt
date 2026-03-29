@@ -1,0 +1,5 @@
+{
+  "name": "Where you at",
+  "description": "A modern, archival urban exploration app blending history with real-time city analytics.",
+  "requestFramePermissions": ["geolocation"]
+}
