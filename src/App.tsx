@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { History as HistoryIcon, Activity, MapPin, Search, Menu, X, MessageSquare, ShieldAlert } from 'lucide-react';
+import { History as HistoryIcon, MapPin, Search, Menu, X, MessageSquare, ShieldAlert } from 'lucide-react';
 import HistorySection from './components/HistorySection';
 import RedditSection from './components/RedditSection';
 import SafetySection from './components/SafetySection';
 import { cn } from './lib/utils';
+import { getLocationData, LocationData } from './lib/locationData';
 
 type Tab = 'history' | 'reddit' | 'safety';
 
@@ -13,12 +14,33 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [location, setLocation] = React.useState('Lower East Side, NYC');
   const [searchInput, setSearchInput] = React.useState('Lower East Side, NYC');
+  const [locationData, setLocationData] = React.useState<LocationData | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Fetch both History + Reddit in parallel whenever location changes
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getLocationData(location);
+        if (!cancelled) setLocationData(data);
+      } catch (err) {
+        if (!cancelled) setError('Failed to load location data. Please try again.');
+        console.error(err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [location]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchInput.trim()) {
-      setLocation(searchInput.trim());
-    }
+    if (searchInput.trim()) setLocation(searchInput.trim());
   };
 
   return (
@@ -26,8 +48,8 @@ export default function App() {
       {/* Navigation */}
       <nav className={cn(
         "sticky top-0 z-40 w-full transition-all duration-500 border-b",
-        activeTab === 'history' 
-          ? "bg-cream/85 border-burgundy/10 backdrop-blur-md" 
+        activeTab === 'history'
+          ? "bg-cream/85 border-burgundy/10 backdrop-blur-md"
           : "bg-pure-white/85 border-gray-100 backdrop-blur-md"
       )}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -51,9 +73,7 @@ export default function App() {
                 onClick={() => setActiveTab('history')}
                 className={cn(
                   "flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300",
-                  activeTab === 'history' 
-                    ? "bg-burgundy text-cream shadow-md" 
-                    : "text-burgundy/60 hover:bg-burgundy/10"
+                  activeTab === 'history' ? "bg-burgundy text-cream shadow-md" : "text-burgundy/60 hover:bg-burgundy/10"
                 )}
               >
                 <HistoryIcon className="w-4 h-4" />
@@ -63,9 +83,7 @@ export default function App() {
                 onClick={() => setActiveTab('reddit')}
                 className={cn(
                   "flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300",
-                  activeTab === 'reddit' 
-                    ? "bg-orange-600 text-white shadow-md" 
-                    : "text-gray-500 hover:bg-gray-100"
+                  activeTab === 'reddit' ? "bg-orange-600 text-white shadow-md" : "text-gray-500 hover:bg-gray-100"
                 )}
               >
                 <MessageSquare className="w-4 h-4" />
@@ -75,9 +93,7 @@ export default function App() {
                 onClick={() => setActiveTab('safety')}
                 className={cn(
                   "flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all duration-300",
-                  activeTab === 'safety' 
-                    ? "bg-black text-white shadow-md" 
-                    : "text-gray-500 hover:bg-gray-100"
+                  activeTab === 'safety' ? "bg-black text-white shadow-md" : "text-gray-500 hover:bg-gray-100"
                 )}
               >
                 <ShieldAlert className="w-4 h-4" />
@@ -89,7 +105,7 @@ export default function App() {
               <button className="p-2 text-burgundy hover:bg-burgundy/5 rounded-full transition-colors">
                 <Search className="w-5 h-5" />
               </button>
-              <button 
+              <button
                 className="md:hidden p-2 text-burgundy"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
@@ -112,33 +128,24 @@ export default function App() {
             <div className="flex flex-col gap-4">
               <button
                 onClick={() => { setActiveTab('history'); setIsMenuOpen(false); }}
-                className={cn(
-                  "flex items-center gap-3 p-4 rounded-xl font-bold transition-colors",
-                  activeTab === 'history' ? "bg-burgundy text-cream" : "text-burgundy bg-burgundy/5"
-                )}
+                className={cn("flex items-center gap-3 p-4 rounded-xl font-bold transition-colors",
+                  activeTab === 'history' ? "bg-burgundy text-cream" : "text-burgundy bg-burgundy/5")}
               >
-                <HistoryIcon className="w-5 h-5" />
-                History
+                <HistoryIcon className="w-5 h-5" />History
               </button>
               <button
                 onClick={() => { setActiveTab('reddit'); setIsMenuOpen(false); }}
-                className={cn(
-                  "flex items-center gap-3 p-4 rounded-xl font-bold transition-colors",
-                  activeTab === 'reddit' ? "bg-orange-600 text-white" : "text-gray-500 bg-gray-100"
-                )}
+                className={cn("flex items-center gap-3 p-4 rounded-xl font-bold transition-colors",
+                  activeTab === 'reddit' ? "bg-orange-600 text-white" : "text-gray-500 bg-gray-100")}
               >
-                <MessageSquare className="w-5 h-5" />
-                Reddit
+                <MessageSquare className="w-5 h-5" />Reddit
               </button>
               <button
                 onClick={() => { setActiveTab('safety'); setIsMenuOpen(false); }}
-                className={cn(
-                  "flex items-center gap-3 p-4 rounded-xl font-bold transition-colors",
-                  activeTab === 'safety' ? "bg-soot-black text-white" : "text-gray-500 bg-gray-100"
-                )}
+                className={cn("flex items-center gap-3 p-4 rounded-xl font-bold transition-colors",
+                  activeTab === 'safety' ? "bg-soot-black text-white" : "text-gray-500 bg-gray-100")}
               >
-                <ShieldAlert className="w-5 h-5" />
-                Safety
+                <ShieldAlert className="w-5 h-5" />Safety
               </button>
             </div>
           </motion.div>
@@ -152,15 +159,15 @@ export default function App() {
           <form onSubmit={handleSearch} className="bg-pure-white/85 backdrop-blur-md p-4 rounded-3xl border border-burgundy/10 shadow-lg flex items-center gap-4">
             <div className="flex-1 flex items-center gap-3 px-4">
               <MapPin className="w-5 h-5 text-burgundy/40" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="bg-transparent border-none focus:ring-0 font-serif text-lg font-bold w-full placeholder:text-burgundy/20 text-burgundy"
                 placeholder="Enter an address, neighborhood, or city..."
               />
             </div>
-            <button 
+            <button
               type="submit"
               className="px-8 py-3 bg-burgundy text-cream rounded-2xl font-bold text-sm uppercase tracking-widest hover:opacity-90 transition-all shadow-md"
             >
@@ -175,6 +182,12 @@ export default function App() {
           </div>
         </div>
 
+        {error && (
+          <div className="max-w-4xl mx-auto mb-8 p-4 bg-alert-red/5 border border-alert-red/20 rounded-2xl text-sm font-bold text-alert-red text-center">
+            {error}
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -183,8 +196,21 @@ export default function App() {
             exit={{ opacity: 0, scale: 1.02 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
-            {activeTab === 'history' && <HistorySection location={location} />}
-            {activeTab === 'reddit' && <RedditSection location={location} />}
+            {activeTab === 'history' && (
+              <HistorySection
+                location={location}
+                historyContent={locationData?.historyContent ?? ''}
+                historySummary={locationData?.historySummary ?? ''}
+                loading={loading}
+              />
+            )}
+            {activeTab === 'reddit' && (
+              <RedditSection
+                location={location}
+                redditData={locationData?.redditData ?? null}
+                loading={loading}
+              />
+            )}
             {activeTab === 'safety' && <SafetySection location={location} />}
           </motion.div>
         </AnimatePresence>
