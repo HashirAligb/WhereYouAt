@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { History as HistoryIcon, MapPin, Search, Menu, X, MessageSquare, ShieldAlert } from 'lucide-react';
+import { History as HistoryIcon, MapPin, Menu, X, MessageSquare, ShieldAlert } from 'lucide-react';
 import HistorySection from './components/HistorySection';
 import RedditSection from './components/RedditSection';
 import SafetySection from './components/SafetySection';
@@ -108,9 +108,6 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-4">
-              <button className="p-2 text-burgundy hover:bg-burgundy/5 rounded-full transition-colors">
-                <Search className="w-5 h-5" />
-              </button>
               <button
                 className="md:hidden p-2 text-burgundy"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
