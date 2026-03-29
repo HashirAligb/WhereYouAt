@@ -24,6 +24,7 @@ export default function App() {
     const load = async () => {
       setLoading(true);
       setError(null);
+      setLocationData(null);
       try {
         const data = await getLocationData(location);
         if (!cancelled) setLocationData(data);
